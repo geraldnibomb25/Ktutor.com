@@ -1,12 +1,15 @@
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end();
 
-  let body;
-  try {
-    body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
-  } catch {
-    return res.status(400).json({ error: "Invalid JSON" });
-  }
+  const body = await new Promise((resolve, reject) => {
+    let data = "";
+    req.on("data", chunk => { data += chunk; });
+    req.on("end", () => {
+      try { resolve(JSON.parse(data)); }
+      catch (e) { reject(e); }
+    });
+    req.on("error", reject);
+  });
 
   const response = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
